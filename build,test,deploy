@@ -1,0 +1,73 @@
+variables:
+  DOCKER_HOST: tcp://localhost:2375
+  dockerTag: '$CI_BUILD_REF'
+
+stages:
+  - build
+  - test
+  - deploy__to_ECS_repo
+  - deploy__to_ECS_stage
+  - deploy__to_PROD
+
+before_script:
+  #remove old docker images
+- sudo docker system prune -f
+- echo $CI_COMMIT_MESSAGE                     
+- echo $CI_COMMIT_TITLE
+- echo $CI_COMMIT_BRANCH
+- echo $CI_COMMIT_SHORT_SHA
+
+build:
+  stage: build
+  tags:
+  - name:runner1
+  script:
+  - sudo docker build --no-cache -t $AWS_REPO .
+  - echo 'done'
+  only:
+  - staging
+
+
+test:
+  stage: test
+  tags:
+  - name:runner1  
+  script:
+  - echo "testing.............."
+  only:
+  - staging
+
+deploy__to_ECS_repo:
+  stage: deploy__to_ECS_repo
+  tags:
+    - name:runner1
+  script:
+  - sudo docker tag $AWS_REPO:latest $AWS_ACCOUNT/$AWS_REPO:latest
+  - sudo docker tag $AWS_REPO:latest $AWS_ACCOUNT/$AWS_REPO:$CI_COMMIT_SHORT_SHA
+  - $AWS_LOGIN | sudo sh
+  - sudo docker push $AWS_ACCOUNT/$AWS_REPO:latest
+  - sudo docker push $AWS_ACCOUNT/$AWS_REPO:$CI_COMMIT_SHORT_SHA
+  - echo 'done'
+  only:
+  - staging
+
+deploy__to_ECS_stage:
+  stage: deploy__to_ECS_stage
+  tags:
+    - name:runner1
+  script:
+  - echo "Deploy to Stage cluster..."
+  - $AWS_LOGIN | sudo sh
+  - $DEPLOY_STAGE
+  - echo 'done'
+  only:
+  - staging
+
+deploy__to_PROD:
+  stage: deploy__to_PROD
+  tags:
+    - name:runner1
+  script:
+    - $DEPLOY_PROD
+  only:
+    - master
