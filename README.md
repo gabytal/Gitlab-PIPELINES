@@ -2,7 +2,7 @@
 #written by Gaby tal
 
 #this pipeline is used with Gitlab, in AWS environment.
-#working with gitlab-runner
+working with gitlab-runner
 
 stages:
 
